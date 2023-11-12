@@ -28,7 +28,6 @@ def get_encryption_key():
     key = key[5:]
     # return decrypted key that was originally encrypted
     # using a session key derived from current user's logon credentials
-    # doc: http://timgolden.me.uk/pywin32-docs/win32crypt.html
     return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
 
 
@@ -57,7 +56,6 @@ def main():
     db = sqlite3.connect(filename)
     cursor = db.cursor()
 
-    # Créer un fichier texte pour écrire les données décryptées
     with open('decrypted_passwords.txt', 'w', encoding='utf-8') as output_file:
         output_file.write("___  ___          _        _         _   _\n")
         output_file.write("|  \\/  |         | |      (_)       | | | |\n")
