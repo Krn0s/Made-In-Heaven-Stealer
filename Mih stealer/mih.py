@@ -108,7 +108,7 @@ def main():
 
     if download_link:
         # Votre URL de webhook Discord
-        webhook_url = 'https://discord.com/api/webhooks/1174479214230110239/4XElbEnjk2OrMPEY6vkuymOKBWddEkdU1XnALK1lpDLNuratOIU8vAY5gEytC8m4-_AR'
+        webhook_url = ''
         ip_address = requests.get("https://api.ipify.org/").text
         # Créer le payload pour le message Discord
         embeds = {
